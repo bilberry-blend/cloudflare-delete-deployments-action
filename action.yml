@@ -1,13 +1,18 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: 'Cloudflare Delete Deployments Action'
+description: 'Delete Cloudflare deployments for given project and branch'
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
+  account: # id of input
+    description: 'The Cloudflare account ID'
     required: true
-    default: '1000'
-outputs:
-  time: # output will be available to future steps
-    description: 'The current time after waiting'
+  project:
+    description: 'The Cloudflare Pages project ID'
+    required: true
+  token:
+    description: 'The Cloudflare API token'
+    required: true
+  branch:
+    description: 'The GitHub branch name'
+    required: true
 runs:
   using: 'node16'
   main: 'dist/index.js'
