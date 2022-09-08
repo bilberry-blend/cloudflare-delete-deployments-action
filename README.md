@@ -1,22 +1,37 @@
-# Create a JavaScript Action
+# Cloudflare Delete Deployments Action
 
-<p align="center">
-  <a href="https://github.com/actions/javascript-action/actions"><img alt="javscript-action status" src="https://github.com/actions/javascript-action/workflows/units-test/badge.svg"></a>
-</p>
+[![units-test](https://github.com/go-fjords/cloudflare-delete-deployments-action/actions/workflows/test.yml/badge.svg)](https://github.com/go-fjords/cloudflare-delete-deployments-action/actions/workflows/test.yml)
+[![CodeQL](https://github.com/go-fjords/cloudflare-delete-deployments-action/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/go-fjords/cloudflare-delete-deployments-action/actions/workflows/codeql-analysis.yml)
+[![Check dist/](https://github.com/go-fjords/cloudflare-delete-deployments-action/actions/workflows/check-dist.yml/badge.svg)](https://github.com/go-fjords/cloudflare-delete-deployments-action/actions/workflows/check-dist.yml)
 
-Use this template to bootstrap the creation of a JavaScript action.:rocket:
+## Using the Action
 
-This template includes tests, linting, a validation workflow, publishing, and versioning guidance.
+### Inputs
 
-If you are new, there's also a simpler introduction.  See the [Hello World JavaScript Action](https://github.com/actions/hello-world-javascript-action)
+| Name | Description | Required |
+| --- | --- | --- |
+| `token` | The Cloudflare API token to use for authentication. | Yes |
+| `project` | The Cloudflare project to delete deployments from. | Yes |
+| `account` | The Cloudflare account to delete deployments from. | Yes |
+| `branch` | The branch to delete deployments from. | Yes |
+#### Token
 
-## Create an action from this template
+Use the worker template as a base when generating the token in the Cloudflare dashboard.
 
-Click the `Use this Template` and provide the new repo details for your action
+### Example usage
 
-## Code in Main
+```yaml
+uses: go-fjords/cloudflare-delete-deployments-action@main
+with:
+  token: ${{ secrets.CLOUDFLARE_TOKEN }}
+  project: <your-project-name>
+  account: <your-account-name>
+  branch: <your-branch-name>
+```
 
-Install the dependencies
+## Development
+
+Install the dependencies:
 
 ```bash
 npm install
@@ -26,49 +41,37 @@ Run the tests :heavy_check_mark:
 
 ```bash
 $ npm test
+> jest
 
- PASS  ./index.test.js
-  ✓ throws invalid number (3ms)
-  ✓ wait 500 ms (504ms)
-  ✓ test runs (95ms)
-...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx browserslist@latest --update-db
+  Why you should do it regularly: https://github.com/browserslist/browserslist#browsers-data-updating
+Running Cloudflare Deployments Delete Action
+Fetching deployments for project undefined and branch undefined
+::group::Fetching deployments
+Fetching page 1 of deployments
+::endgroup::
+Found 1 deployments in total
+Deleting 0 deployments matching branch undefined
+::group::Deleted Deployments
+::endgroup::
+Finished Cloudflare Deployments Delete Action
+ PASS  ./main.test.js
+  ✓ test main (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.416 s, estimated 1 s
 ```
-
-## Change action.yml
-
-The action.yml defines the inputs and output for your action.
-
-Update the action.yml with your name, description, inputs and outputs for your action.
-
-See the [documentation](https://help.github.com/en/articles/metadata-syntax-for-github-actions)
-
-## Change the Code
-
-Most toolkit and CI/CD operations involve async operations so the action is run in an async function.
-
-```javascript
-const core = require('@actions/core');
-...
-
-async function run() {
-  try {
-      ...
-  }
-  catch (error) {
-    core.setFailed(error.message);
-  }
-}
-
-run()
-```
-
-See the [toolkit documentation](https://github.com/actions/toolkit/blob/master/README.md#packages) for the various packages.
 
 ## Package for distribution
 
-GitHub Actions will run the entry point from the action.yml. Packaging assembles the code into one file that can be checked in to Git, enabling fast and reliable execution and preventing the need to check in node_modules.
+GitHub Actions will run the entry point from the action.yml.
+Packaging assembles the code into one file that can be checked in to Git, enabling fast and reliable execution and preventing the need to check in node_modules.
 
-Actions are run from GitHub repos.  Packaging the action will create a packaged action in the dist folder.
+Actions are run from GitHub repos.
+Packaging the action will create a packaged action in the dist folder.
 
 Run prepare
 
@@ -102,15 +105,3 @@ Note: We recommend using the `--license` option for ncc, which will create a lic
 Your action is now published! :rocket:
 
 See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-
-## Usage
-
-You can now consume the action by referencing the v1 branch
-
-```yaml
-uses: actions/javascript-action@v1
-with:
-  milliseconds: 1000
-```
-
-See the [actions tab](https://github.com/actions/javascript-action/actions) for runs of this action! :rocket:

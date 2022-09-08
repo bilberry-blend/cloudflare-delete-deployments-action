@@ -1,4 +1,4 @@
-name: "units-test"
+name: 'units-test'
 on:
   pull_request:
   push:
@@ -11,15 +11,16 @@ jobs:
   units:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - run: npm ci
-    - run: npm test
+      - uses: actions/checkout@v3
+      - run: npm ci
+      - run: npm test
 
   # test action works running from the graph
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./
-      with:
-        milliseconds: 1000
+  # TODO: Find a way to make a few cloudflare deploys and then run the action
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: ./
+  #     with:
+  #       milliseconds: 1000
