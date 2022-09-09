@@ -68,7 +68,7 @@ const deleteDeployment = async (project, account, token, deployment) => {
 }
 
 const main = async (project, account, branch, token) => {
-  core.info('Running Cloudflare Deployments Delete Action')
+  core.info('🏃‍♀️ Running Cloudflare Deployments Delete Action')
 
   core.info(`Fetching deployments for project ${project} and branch ${branch}`)
 
@@ -83,7 +83,7 @@ const main = async (project, account, branch, token) => {
     .filter(d => d.deployment_trigger.metadata.branch === branch)
     .slice(1)
 
-  core.info(`Deleting ${branchDeployments.length} deployments matching branch ${branch}`)
+  core.info(`🪓 Deleting ${branchDeployments.length} deployments matching branch ${branch}`)
 
   // Delete all deployments for the branch
   const deleted = await Promise.allSettled(branchDeployments.map(d => deleteDeployment(project, account, token, d)))
@@ -93,14 +93,14 @@ const main = async (project, account, branch, token) => {
   // Log the results of the deletion, index should match
   deleted.forEach((d, i) => {
     if (d.status === 'fulfilled') {
-      core.info(`Deleted deployment ${branchDeployments[i].id}`)
+      core.info(`🟢 Deleted deployment ${branchDeployments[i].id}`)
     } else {
-      core.error(`Failed to delete deployment ${branchDeployments[i].id}`)
+      core.error(`🔴 Failed to delete deployment ${branchDeployments[i].id}`)
     }
   })
   core.endGroup()
 
-  core.info('Finished Cloudflare Deployments Delete Action')
+  core.info('🎉 Finished Cloudflare Deployments Delete Action')
 }
 
 exports.main = main
