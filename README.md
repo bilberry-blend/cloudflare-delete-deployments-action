@@ -11,8 +11,8 @@
 | Name | Description | Required |
 | --- | --- | --- |
 | `token` | The Cloudflare API token to use for authentication. | Yes |
-| `project` | The Cloudflare project to delete deployments from. | Yes |
-| `account` | The Cloudflare account to delete deployments from. | Yes |
+| `project` | The Cloudflare project name to delete deployments from. | Yes |
+| `account` | The Cloudflare account id to delete deployments from. | Yes |
 | `branch` | The branch to delete deployments from. | Yes |
 #### Token
 
@@ -25,8 +25,33 @@ uses: go-fjords/cloudflare-delete-deployments-action@main
 with:
   token: ${{ secrets.CLOUDFLARE_TOKEN }}
   project: <your-project-name>
-  account: <your-account-name>
+  account: <your-account-id>
   branch: <your-branch-name>
+```
+
+Example workflow to delete deployments for a given PR on merge or close:
+
+```yaml
+name: Pull Request Closed
+concurrency:
+  group: pr_${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+on:
+  pull_request:
+    types:
+      - closed
+      - merged
+
+jobs:
+  - name: Delete Cloudflare Preview Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: go-fjords/cloudflare-delete-deployments-action@main
+        with:
+          token: ${{ secrets.CLOUDFLARE_TOKEN }}
+          project: <your-project-name>
+          account: <your-account-id>
+          branch: ${{ github.head_ref }}
 ```
 
 ## Development
