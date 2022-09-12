@@ -48,7 +48,7 @@ const getDeployments = async (project, account, since, token) => {
     deployments.push(...nextResults)
   } while (
     page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page) &&
-    new Date(lastResult.created_on).getTime() < since.GetTime()
+    new Date(lastResult.created_on).getTime() > since.GetTime()
   )
 
   core.endGroup()
