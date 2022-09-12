@@ -28,6 +28,8 @@ const getDeployments = async (project, account, since, token) => {
   let page = 1
   let lastResult
   let resultInfo
+  let hasNextPage
+  let dateSinceNotReached
 
   do {
     core.info(`Fetching page ${page} of deployments`)
@@ -52,10 +54,9 @@ const getDeployments = async (project, account, since, token) => {
     lastResult = nextResults[nextResults.length - 1]
 
     deployments.push(...nextResults)
-  } while (
-    page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page) &&
-    new Date(lastResult.created_on).getTime() > since.GetTime()
-  )
+    hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page)
+    dateSinceNotReached = new Date(lastResult.created_on).getTime() >= since.getTime()
+  } while (hasNextPage && dateSinceNotReached)
 
   core.endGroup()
   return deployments
@@ -103,7 +104,7 @@ const main = async (project, account, branch, since, token) => {
   core.info(`Fetching deployments for project ${project} and branch ${branch} since ${sinceSafe.toDateString()}`)
 
   /** @type {import('./typings/dependencies').Response['result']} */
-  const deployments = await getDeployments(project, account, since, token)
+  const deployments = await getDeployments(project, account, sinceSafe, token)
 
   core.info(`Found ${deployments.length} deployments in total`)
 
