@@ -13,6 +13,10 @@ inputs:
   branch:
     description: 'The GitHub branch name'
     required: true
+  since:
+    description: 'Filter deployments to those deployed after since, in ISO 8601 format'
+    default: '1970-01-01T00:00:00Z'
+    required: false
 runs:
   using: 'node16'
   main: 'dist/index.js'

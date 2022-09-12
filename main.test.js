@@ -127,5 +127,11 @@ const mockDeploymentsResponse = {
 }
 
 test('test main', async () => {
-  expect(async () => await main.main('ninjakittens', 'cloudflare', 'foo', 'example-token')).not.toThrow()
+  expect(async () => await main.main('ninjakittens', 'cloudflare', 'foo', '', 'example-token')).not.toThrow()
+})
+
+test('test main with since', async () => {
+  expect(
+    async () => await main.main('ninjakittens', 'cloudflare', 'foo', '2021-03-09T00:55:03.923456Z', 'example-token')
+  ).not.toThrow()
 })

@@ -9,14 +9,21 @@ const apiUrl = 'https://api.cloudflare.com/client/v4'
 const httpClient = new http.HttpClient('Cloudflare Pages Deployments Delete Action')
 
 // Fetch list of Cloudflare deployments
-const getDeployments = async (project, account, branch, token) => {
+// @param {string} project
+// @param {string} account
+// @param {Date} since
+// @param {string} token
+const getDeployments = async (project, account, since, token) => {
   core.startGroup('Fetching deployments')
 
   /** @type {import('./typings/dependencies').Response['result']} */
   const deployments = []
 
   let page = 1
+  let lastResult
   let resultInfo
+  let hasNextPage
+  let dateSinceNotReached
 
   do {
     core.info(`Fetching page ${page} of deployments`)
@@ -37,9 +44,13 @@ const getDeployments = async (project, account, branch, token) => {
     }
 
     resultInfo = res.result.result_info
+    const nextResults = res.result.result
+    lastResult = nextResults[nextResults.length - 1]
 
-    deployments.push(...res.result.result)
-  } while (page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page))
+    deployments.push(...nextResults)
+    hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page)
+    dateSinceNotReached = new Date(lastResult.created_on).getTime() >= since.getTime()
+  } while (hasNextPage && dateSinceNotReached)
 
   core.endGroup()
   return deployments
@@ -67,18 +78,33 @@ const deleteDeployment = async (project, account, token, deployment) => {
   return null
 }
 
-const main = async (project, account, branch, token) => {
+const sinceDate = input => {
+  if (input === '') return new Date(0)
+
+  const date = new Date(input)
+
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid since date: ${input}`)
+  }
+
+  return date
+}
+
+const main = async (project, account, branch, since, token) => {
   core.info('🏃‍♀️ Running Cloudflare Deployments Delete Action')
 
-  core.info(`Fetching deployments for project ${project} and branch ${branch}`)
+  const sinceSafe = sinceDate(since)
+
+  core.info(`Fetching deployments for project ${project} and branch ${branch} since ${sinceSafe.toDateString()}`)
 
   /** @type {import('./typings/dependencies').Response['result']} */
-  const deployments = await getDeployments(project, account, branch, token)
+  const deployments = await getDeployments(project, account, sinceSafe, token)
 
   core.info(`Found ${deployments.length} deployments in total`)
 
   // Filter deployments by branch name
   const branchDeployments = deployments
+    .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
     .filter(d => d.deployment_trigger.type === 'github:push')
     .filter(d => d.deployment_trigger.metadata.branch === branch)
     .slice(1)

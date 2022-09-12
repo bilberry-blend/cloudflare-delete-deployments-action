@@ -14,6 +14,7 @@
 | `project` | The Cloudflare project name to delete deployments from. | Yes |
 | `account` | The Cloudflare account id to delete deployments from. | Yes |
 | `branch` | The branch to delete deployments from. | Yes |
+| `since` | Filter deployments to those deployed after since, in ISO8601 format | No |
 #### Token
 
 Use the worker template as a base when generating the token in the Cloudflare dashboard.
