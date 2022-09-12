@@ -46,10 +46,9 @@ const getDeployments = async (project, account, since, token) => {
     lastResult = nextResults[nextResults.length - 1]
 
     deployments.push(...nextResults)
-  } while (
-    page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page) &&
-    new Date(lastResult.created_on).getTime() > since.GetTime()
-  )
+    const hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page);
+    const dateSinceNotReached = new Date(lastResult.created_on).getTime() < since.GetTime();
+  } while (hasNextPage && dateSinceNotReached)
 
   core.endGroup()
   return deployments
