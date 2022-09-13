@@ -12,7 +12,6 @@ jest.mock('@actions/http-client', () => ({
     del: jest.fn().mockImplementation(() => {
       return Promise.resolve({
         readBody: jest.fn().mockImplementation(() => {
-          console.log('readBody')
           return Promise.resolve(
             JSON.stringify({
               success: true,
@@ -214,10 +213,10 @@ const mockDeploymentsResponse = {
 
 test('test main', async () => {
   const task = main.main('ninjakittens', 'cloudflare', 'foo', '', 'example-token')
-  expect(task).resolves.toBe(1)
+  await expect(task).resolves.toBe(1)
 })
 
 test('test main with since', async () => {
   const task = main.main('ninjakittens', 'cloudflare', 'foo', '2021-03-09T00:30:03.923456Z', 'example-token')
-  expect(task).resolves.toBe(1)
+  await expect(task).resolves.toBe(1)
 })
