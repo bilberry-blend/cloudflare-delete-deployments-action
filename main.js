@@ -127,6 +127,9 @@ const main = async (project, account, branch, since, token) => {
   core.endGroup()
 
   core.info('🎉 Finished Cloudflare Deployments Delete Action')
+
+  // Used mainly for testing purposes
+  return deleted.length
 }
 
 exports.main = main
