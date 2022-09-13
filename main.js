@@ -95,7 +95,7 @@ const main = async (project, account, branch, since, token) => {
 
   const sinceSafe = sinceDate(since)
 
-  core.info(`Fetching deployments for project ${project} and branch ${branch} since ${sinceSafe.toDateString()}`)
+  core.info(`Fetching deployments for project ${project} since ${sinceSafe.toISOString()}`)
 
   /** @type {import('./typings/dependencies').Response['result']} */
   const deployments = await getDeployments(project, account, sinceSafe, token)
