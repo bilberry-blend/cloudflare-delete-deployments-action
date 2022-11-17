@@ -90,7 +90,7 @@ const sinceDate = input => {
   return date
 }
 
-const main = async (project, account, branch, since, token) => {
+const main = async (project, account, branch, since, token, deploymentTriggerType = 'github:push') => {
   core.info('🏃‍♀️ Running Cloudflare Deployments Delete Action')
 
   const sinceSafe = sinceDate(since)
@@ -105,7 +105,7 @@ const main = async (project, account, branch, since, token) => {
   // Filter deployments by branch name
   const branchDeployments = deployments
     .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
-    .filter(d => d.deployment_trigger.type === 'github:push')
+    .filter(d =>  d.deployment_trigger.type === deploymentTriggerType)
     .filter(d => d.deployment_trigger.metadata.branch === branch)
     .slice(1)
 
