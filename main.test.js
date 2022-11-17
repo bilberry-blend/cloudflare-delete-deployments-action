@@ -144,7 +144,7 @@ const mockDeploymentsResponse = {
       deployment_trigger: {
         type: 'github:push',
         metadata: {
-          branch: 'bar',
+          branch: 'foo',
           commit_hash: 'ad9ccd918a81025731e10e40267e11273a263421',
           commit_message: 'Update index.html',
         },
@@ -297,17 +297,17 @@ const mockDeploymentsResponse = {
   },
 }
 
-test('test main', async () => {
+test('should return two deployment', async () => {
   const task = main.main('ninjakittens', 'cloudflare', 'foo', '', 'example-token')
+  await expect(task).resolves.toBe(2)
+})
+
+test('should return one deployment after the 2021-03-09T00:50:03', async () => {
+  const task = main.main('ninjakittens', 'cloudflare', 'foo', '2021-03-09T00:50:03.923456Z', 'example-token')
   await expect(task).resolves.toBe(1)
 })
 
-test('test main with since', async () => {
-  const task = main.main('ninjakittens', 'cloudflare', 'bar', '2021-03-09T00:30:03.923456Z', 'example-token')
-  await expect(task).resolves.toBe(1)
-})
-
-test('test main with deployment type', async () => {
+test('should return one deployment for the type `ad_hoc`', async () => {
   const task = main.main('ninjakittens', 'cloudflare', 'foobar', '', 'example-token', 'ad_hoc');
   await expect(task).resolves.toBe(1)
 })
