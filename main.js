@@ -107,7 +107,6 @@ const main = async (project, account, branch, since, token, deploymentTriggerTyp
     .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
     .filter(d =>  d.deployment_trigger.type === deploymentTriggerType)
     .filter(d => d.deployment_trigger.metadata.branch === branch)
-    .slice(1)
 
   core.info(`🪓 Deleting ${branchDeployments.length} deployments matching branch ${branch}`)
 
