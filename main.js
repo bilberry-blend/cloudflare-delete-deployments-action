@@ -8,11 +8,21 @@ const http = require('@actions/http-client')
 const apiUrl = 'https://api.cloudflare.com/client/v4'
 const httpClient = new http.HttpClient('Cloudflare Pages Deployments Delete Action')
 
-// Fetch list of Cloudflare deployments
-// @param {string} project
-// @param {string} account
-// @param {Date} since
-// @param {string} token
+/**
+ *  Return a promise that resolves after the delay
+ *
+ * @param {number} delay
+ */
+const wait = (delay) => new Promise(resolve => setTimeout(resolve, delay));
+
+/**
+ * Fetch list of Cloudflare deployments
+ *
+ * @param {string} project
+ * @param {string} account
+ * @param {Date} since
+ * @param {string} token
+ */
 const getDeployments = async (project, account, since, token) => {
   core.startGroup('Fetching deployments')
 
@@ -26,10 +36,11 @@ const getDeployments = async (project, account, since, token) => {
   let dateSinceNotReached
 
   do {
-    core.info(`Fetching page ${page} of deployments`)
+    core.info(`Fetching page ${page}/${Math.ceil(resultInfo.total_count / resultInfo.per_page)} of deployments`)
     /** @type {ListDependenciesResponse} */
+
     const res = await httpClient.getJson(
-      `${apiUrl}/accounts/${account}/pages/projects/${project}/deployments?page=${page}`,
+      `${apiUrl}/accounts/${account}/pages/projects/${project}/deployments?page=${page}&sort_by=created_on&sort_order=desc`,
       {
         Authorization: `Bearer ${token}`,
       }
@@ -50,6 +61,7 @@ const getDeployments = async (project, account, since, token) => {
     deployments.push(...nextResults)
     hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page)
     dateSinceNotReached = new Date(lastResult.created_on).getTime() >= since.getTime()
+    await wait(250); // Api rate limit is 1200req/5min <--> 4req/s
   } while (hasNextPage && dateSinceNotReached)
 
   core.endGroup()
@@ -78,6 +90,11 @@ const deleteDeployment = async (project, account, token, deployment) => {
   return null
 }
 
+/**
+ *  Transform a date string to a Date object
+ *
+ * @param {string} input
+ */
 const sinceDate = input => {
   if (input === '') return new Date(0)
 
