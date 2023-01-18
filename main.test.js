@@ -298,16 +298,53 @@ const mockDeploymentsResponse = {
 }
 
 test('should return two deployment', async () => {
-  const task = main.main('ninjakittens', 'cloudflare', 'foo', '', 'example-token')
+  const task = main.main({
+    project: 'ninjakittens',
+    account: 'cloudflare',
+    branch: 'foo',
+    since: '',
+    token: 'example-token',
+    keep: '0',
+    deploymentTriggerType: 'github:push',
+  })
   await expect(task).resolves.toBe(2)
 })
 
 test('should return one deployment after the 2021-03-09T00:50:03', async () => {
-  const task = main.main('ninjakittens', 'cloudflare', 'foo', '2021-03-09T00:50:03.923456Z', 'example-token')
+  const task = main.main({
+    project: 'ninjakittens',
+    account: 'cloudflare',
+    branch: 'foo',
+    since: '2021-03-09T00:50:03.923456Z',
+    token: 'example-token',
+    keep: '0',
+    deploymentTriggerType: 'github:push',
+  })
+  await expect(task).resolves.toBe(1)
+})
+
+test('should return one deployment if keep == 1', async () => {
+  const task = main.main({
+    project: 'ninjakittens',
+    account: 'cloudflare',
+    branch: 'foo',
+    since: '',
+    token: 'example-token',
+    keep: '1',
+    deploymentTriggerType: 'github:push',
+  })
   await expect(task).resolves.toBe(1)
 })
 
 test('should return one deployment for the type `ad_hoc`', async () => {
-  const task = main.main('ninjakittens', 'cloudflare', 'foobar', '', 'example-token', 'ad_hoc');
+  const task = main.main({
+    project: 'ninjakittens',
+    account: 'cloudflare',
+    branch: 'foobar',
+    since: '',
+    token: 'example-token',
+    deploymentTriggerType: 'ad_hoc',
+    keep: '0',
+  })
   await expect(task).resolves.toBe(1)
 })

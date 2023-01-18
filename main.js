@@ -13,7 +13,7 @@ const httpClient = new http.HttpClient('Cloudflare Pages Deployments Delete Acti
  *
  * @param {number} delay
  */
-const wait = (delay) => new Promise(resolve => setTimeout(resolve, delay));
+const wait = delay => new Promise(resolve => setTimeout(resolve, delay))
 
 /**
  * Fetch list of Cloudflare deployments
@@ -36,7 +36,11 @@ const getDeployments = async (project, account, since, token) => {
   let dateSinceNotReached
 
   do {
-    core.info(`Fetching page ${page}/${Math.ceil(resultInfo.total_count / resultInfo.per_page)} of deployments`)
+    core.info(
+      `Fetching page ${page} / ${
+        resultInfo ? Math.ceil(resultInfo.total_count / resultInfo.per_page) : '?'
+      } of deployments`
+    )
     /** @type {ListDependenciesResponse} */
 
     const res = await httpClient.getJson(
@@ -61,7 +65,7 @@ const getDeployments = async (project, account, since, token) => {
     deployments.push(...nextResults)
     hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page)
     dateSinceNotReached = new Date(lastResult.created_on).getTime() >= since.getTime()
-    await wait(250); // Api rate limit is 1200req/5min <--> 4req/s
+    await wait(250) // Api rate limit is 1200req/5min <--> 4req/s
   } while (hasNextPage && dateSinceNotReached)
 
   core.endGroup()
@@ -71,9 +75,11 @@ const getDeployments = async (project, account, since, token) => {
 /**
  * @param {import('./typings/dependencies').Deployment} deployment
  */
-const deleteDeployment = async (project, account, token, deployment) => {
+const deleteDeployment = async (project, account, token, force, deployment) => {
   const res = await httpClient.del(
-    `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}/deployments/${deployment.id}`,
+    `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}/deployments/${deployment.id}${
+      force ? '?force=true' : ''
+    }`,
     {
       authorization: `Bearer ${token}`,
     }
@@ -81,6 +87,8 @@ const deleteDeployment = async (project, account, token, deployment) => {
 
   /** @type {DeleteDependencies} */
   const body = JSON.parse(await res.readBody())
+
+  await wait(250) // Api rate limit is 1200req/5min <--> 4req/s
 
   if (!body.success) {
     throw new Error(body.errors.map(e => e.message).join('\n'))
@@ -107,10 +115,21 @@ const sinceDate = input => {
   return date
 }
 
-const main = async (project, account, branch, since, token, deploymentTriggerType = 'github:push') => {
+const parseNumber = input => {
+  core.info('Keep value: ' + input)
+  const number = Number.parseInt(input, 10)
+  if (isNaN(number)) {
+    throw new Error(`Invalid keep value: ${input}`)
+  }
+
+  return number
+}
+
+const main = async ({ project, account, branch, since, token, deploymentTriggerType, keep }) => {
   core.info('🏃‍♀️ Running Cloudflare Deployments Delete Action')
 
   const sinceSafe = sinceDate(since)
+  const keepNumber = parseNumber(keep)
 
   core.info(`Fetching deployments for project ${project} since ${sinceSafe.toISOString()}`)
 
@@ -122,30 +141,30 @@ const main = async (project, account, branch, since, token, deploymentTriggerTyp
   // Filter deployments by branch name
   const branchDeployments = deployments
     .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
-    .filter(d =>  d.deployment_trigger.type === deploymentTriggerType)
+    .filter(d => d.deployment_trigger.type === deploymentTriggerType)
     .filter(d => d.deployment_trigger.metadata.branch === branch)
+    .slice(keepNumber)
 
   core.info(`🪓 Deleting ${branchDeployments.length} deployments matching branch ${branch}`)
 
-  // Delete all deployments for the branch
-  const deleted = await Promise.allSettled(branchDeployments.map(d => deleteDeployment(project, account, token, d)))
-
   core.startGroup('Deleted Deployments')
-
-  // Log the results of the deletion, index should match
-  deleted.forEach((d, i) => {
-    if (d.status === 'fulfilled') {
+  // Delete all deployments for the branch
+  let deleted = 0
+  for (let i = 0; i < branchDeployments.length; i++) {
+    try {
+      await deleteDeployment(project, account, token, keep === 0, branchDeployments[i])
+      deleted = deleted + 1
       core.info(`🟢 Deleted deployment ${branchDeployments[i].id}`)
-    } else {
+    } catch (e) {
       core.error(`🔴 Failed to delete deployment ${branchDeployments[i].id}`)
     }
-  })
+  }
   core.endGroup()
 
   core.info('🎉 Finished Cloudflare Deployments Delete Action')
 
   // Used mainly for testing purposes
-  return deleted.length
+  return deleted
 }
 
 exports.main = main
