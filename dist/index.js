@@ -147,7 +147,7 @@ const main = async ({ project, account, branch, since, token, deploymentTriggerT
   // Filter deployments by branch name
   const branchDeployments = deployments
     .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
-    .filter(d => d.deployment_trigger.type === deploymentTriggerType)
+    .filter(d => deploymentTriggerType === '' || d.deployment_trigger.type === deploymentTriggerType)
     .filter(d => d.deployment_trigger.metadata.branch === branch)
     .slice(keepNumber)
 
