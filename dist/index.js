@@ -14,11 +14,21 @@ const http = __nccwpck_require__(255)
 const apiUrl = 'https://api.cloudflare.com/client/v4'
 const httpClient = new http.HttpClient('Cloudflare Pages Deployments Delete Action')
 
-// Fetch list of Cloudflare deployments
-// @param {string} project
-// @param {string} account
-// @param {Date} since
-// @param {string} token
+/**
+ *  Return a promise that resolves after the delay
+ *
+ * @param {number} delay
+ */
+const wait = delay => new Promise(resolve => setTimeout(resolve, delay))
+
+/**
+ * Fetch list of Cloudflare deployments
+ *
+ * @param {string} project
+ * @param {string} account
+ * @param {Date} since
+ * @param {string} token
+ */
 const getDeployments = async (project, account, since, token) => {
   core.startGroup('Fetching deployments')
 
@@ -32,10 +42,15 @@ const getDeployments = async (project, account, since, token) => {
   let dateSinceNotReached
 
   do {
-    core.info(`Fetching page ${page} of deployments`)
+    core.info(
+      `Fetching page ${page} / ${
+        resultInfo ? Math.ceil(resultInfo.total_count / resultInfo.per_page) : '?'
+      } of deployments`
+    )
     /** @type {ListDependenciesResponse} */
+
     const res = await httpClient.getJson(
-      `${apiUrl}/accounts/${account}/pages/projects/${project}/deployments?page=${page}`,
+      `${apiUrl}/accounts/${account}/pages/projects/${project}/deployments?page=${page}&sort_by=created_on&sort_order=desc`,
       {
         Authorization: `Bearer ${token}`,
       }
@@ -56,6 +71,7 @@ const getDeployments = async (project, account, since, token) => {
     deployments.push(...nextResults)
     hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page)
     dateSinceNotReached = new Date(lastResult.created_on).getTime() >= since.getTime()
+    await wait(250) // Api rate limit is 1200req/5min <--> 4req/s
   } while (hasNextPage && dateSinceNotReached)
 
   core.endGroup()
@@ -65,9 +81,11 @@ const getDeployments = async (project, account, since, token) => {
 /**
  * @param {import('./typings/dependencies').Deployment} deployment
  */
-const deleteDeployment = async (project, account, token, deployment) => {
+const deleteDeployment = async (project, account, token, force, deployment) => {
   const res = await httpClient.del(
-    `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}/deployments/${deployment.id}`,
+    `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}/deployments/${deployment.id}${
+      force ? '?force=true' : ''
+    }`,
     {
       authorization: `Bearer ${token}`,
     }
@@ -75,6 +93,8 @@ const deleteDeployment = async (project, account, token, deployment) => {
 
   /** @type {DeleteDependencies} */
   const body = JSON.parse(await res.readBody())
+
+  await wait(250) // Api rate limit is 1200req/5min <--> 4req/s
 
   if (!body.success) {
     throw new Error(body.errors.map(e => e.message).join('\n'))
@@ -84,6 +104,11 @@ const deleteDeployment = async (project, account, token, deployment) => {
   return null
 }
 
+/**
+ *  Transform a date string to a Date object
+ *
+ * @param {string} input
+ */
 const sinceDate = input => {
   if (input === '') return new Date(0)
 
@@ -96,10 +121,21 @@ const sinceDate = input => {
   return date
 }
 
-const main = async (project, account, branch, since, token) => {
+const parseNumber = input => {
+  core.info('Keep value: ' + input)
+  const number = Number.parseInt(input, 10)
+  if (isNaN(number)) {
+    throw new Error(`Invalid keep value: ${input}`)
+  }
+
+  return number
+}
+
+const main = async ({ project, account, branch, since, token, deploymentTriggerType, keep }) => {
   core.info('🏃‍♀️ Running Cloudflare Deployments Delete Action')
 
   const sinceSafe = sinceDate(since)
+  const keepNumber = parseNumber(keep)
 
   core.info(`Fetching deployments for project ${project} since ${sinceSafe.toISOString()}`)
 
@@ -111,31 +147,30 @@ const main = async (project, account, branch, since, token) => {
   // Filter deployments by branch name
   const branchDeployments = deployments
     .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
-    .filter(d => d.deployment_trigger.type === 'github:push')
+    .filter(d => deploymentTriggerType === '' || d.deployment_trigger.type === deploymentTriggerType)
     .filter(d => d.deployment_trigger.metadata.branch === branch)
-    .slice(1)
+    .slice(keepNumber)
 
   core.info(`🪓 Deleting ${branchDeployments.length} deployments matching branch ${branch}`)
 
-  // Delete all deployments for the branch
-  const deleted = await Promise.allSettled(branchDeployments.map(d => deleteDeployment(project, account, token, d)))
-
   core.startGroup('Deleted Deployments')
-
-  // Log the results of the deletion, index should match
-  deleted.forEach((d, i) => {
-    if (d.status === 'fulfilled') {
+  // Delete all deployments for the branch
+  let deleted = 0
+  for (let i = 0; i < branchDeployments.length; i++) {
+    try {
+      await deleteDeployment(project, account, token, keep === 0, branchDeployments[i])
+      deleted = deleted + 1
       core.info(`🟢 Deleted deployment ${branchDeployments[i].id}`)
-    } else {
+    } catch (e) {
       core.error(`🔴 Failed to delete deployment ${branchDeployments[i].id}`)
     }
-  })
+  }
   core.endGroup()
 
   core.info('🎉 Finished Cloudflare Deployments Delete Action')
 
   // Used mainly for testing purposes
-  return deleted.length
+  return deleted
 }
 
 exports.main = main
@@ -2952,14 +2987,16 @@ const { main } = __nccwpck_require__(496)
 const project = core.getInput('project')
 const account = core.getInput('account')
 const branch = core.getInput('branch')
-const since = core.getInput('since')
+const since = core.getInput('since', { required: false })
+const deploymentTriggerType = core.getInput('deployment_trigger', { required: false })
+const keep = core.getInput('keep', { required: false })
 
 // Sensitive input parameters to authenticate with the API
 const token = core.getInput('token')
 core.setSecret(token) // Ensure Cloudflare token does not leak into logs
 
 try {
-  main(project, account, branch, since, token)
+  main({ project, account, branch, since, token, deploymentTriggerType, keep })
 } catch (error) {
   core.setFailed(error.message)
 }

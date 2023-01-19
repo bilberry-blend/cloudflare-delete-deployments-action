@@ -17,6 +17,13 @@ inputs:
     description: 'Filter deployments to those deployed after since, in ISO 8601 format'
     default: '1970-01-01T00:00:00Z'
     required: false
+  deployment_trigger:
+    description: 'The type of deployement to filter with (e.g. github:push or ad_hoc)'
+    required: false
+  keep:
+    description: 'The number of deployments to keep (default: 0)'
+    default: '0'
+    required: false
 runs:
   using: 'node16'
   main: 'dist/index.js'

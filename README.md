@@ -8,13 +8,15 @@
 
 ### Inputs
 
-| Name | Description | Required |
-| --- | --- | --- |
-| `token` | The Cloudflare API token to use for authentication. | Yes |
-| `project` | The Cloudflare project name to delete deployments from. | Yes |
-| `account` | The Cloudflare account id to delete deployments from. | Yes |
-| `branch` | The branch to delete deployments from. | Yes |
-| `since` | Filter deployments to those deployed after since, in ISO8601 format | No |
+| Name                 | Description                                                          | Required | Default    |
+| -------------------- | -------------------------------------------------------------------- | -------- | ---------- |
+| `token`              | The Cloudflare API token to use for authentication.                  | Yes      |            |
+| `project`            | The Cloudflare project name to delete deployments from.              | Yes      |            |
+| `account`            | The Cloudflare account id to delete deployments from.                | Yes      |            |
+| `branch`             | The branch to delete deployments from.                               | Yes      |            |
+| `since`              | Filter deployments to those deployed after since, in ISO8601 format  | No       | 1970-01-01 |
+| `deployment_trigger` | Filter deployments to those deployed by the given deployment trigger | No       |            |
+
 #### Token
 
 Use the worker template as a base when generating the token in the Cloudflare dashboard.
