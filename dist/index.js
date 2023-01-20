@@ -158,7 +158,7 @@ const main = async ({ project, account, branch, since, token, deploymentTriggerT
   let deleted = 0
   for (let i = 0; i < branchDeployments.length; i++) {
     try {
-      await deleteDeployment(project, account, token, keep === 0, branchDeployments[i])
+      await deleteDeployment(project, account, token, keepNumber === 0, branchDeployments[i])
       deleted = deleted + 1
       core.info(`🟢 Deleted deployment ${branchDeployments[i].id}`)
     } catch (e) {
