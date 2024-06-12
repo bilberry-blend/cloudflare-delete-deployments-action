@@ -20,10 +20,11 @@ const wait = delay => new Promise(resolve => setTimeout(resolve, delay))
  *
  * @param {string} project
  * @param {string} account
- * @param {Date} since
+ * @param {Date} after
  * @param {string} token
+ * @param {Date} before
  */
-const getDeployments = async (project, account, since, token) => {
+const getDeployments = async (project, account, after, token, before) => {
   core.startGroup('Fetching deployments')
 
   /** @type {import('./typings/dependencies').Response['result']} */
@@ -33,7 +34,7 @@ const getDeployments = async (project, account, since, token) => {
   let lastResult
   let resultInfo
   let hasNextPage
-  let dateSinceNotReached
+  let dateWithinRange
 
   do {
     core.info(
@@ -64,12 +65,15 @@ const getDeployments = async (project, account, since, token) => {
 
     deployments.push(...nextResults)
     hasNextPage = page++ < Math.ceil(resultInfo.total_count / resultInfo.per_page)
-    dateSinceNotReached = new Date(lastResult.created_on).getTime() >= since.getTime()
+    dateWithinRange = new Date(lastResult.created_on).getTime() >= after.getTime() && (!before || new Date(lastResult.created_on).getTime() < before.getTime())
     await wait(250) // Api rate limit is 1200req/5min <--> 4req/s
-  } while (hasNextPage && dateSinceNotReached)
+  } while (hasNextPage && dateWithinRange)
+
+  // Filter deployments to only include those before the 'before' date if specified
+  const filteredDeployments = before ? deployments.filter(d => new Date(d.created_on).getTime() < before.getTime()) : deployments
 
   core.endGroup()
-  return deployments
+  return filteredDeployments
 }
 
 /**
@@ -103,13 +107,30 @@ const deleteDeployment = async (project, account, token, force, deployment) => {
  *
  * @param {string} input
  */
-const sinceDate = input => {
+const afterDate = input => {
   if (input === '') return new Date(0)
 
   const date = new Date(input)
 
   if (isNaN(date.getTime())) {
-    throw new Error(`Invalid since date: ${input}`)
+    throw new Error(`Invalid after date: ${input}`)
+  }
+
+  return date
+}
+
+/**
+ *  Transform a date string to a Date object
+ *
+ * @param {string} input
+ */
+const beforeDate = input => {
+  if (input === '') return null
+
+  const date = new Date(input)
+
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid before date: ${input}`)
   }
 
   return date
@@ -125,22 +146,23 @@ const parseNumber = input => {
   return number
 }
 
-const main = async ({ project, account, branch, since, token, deploymentTriggerType, keep }) => {
+const main = async ({ project, account, branch, after, token, deploymentTriggerType, keep, before }) => {
   core.info('🏃‍♀️ Running Cloudflare Deployments Delete Action')
 
-  const sinceSafe = sinceDate(since)
+  const afterSafe = afterDate(after)
+  const beforeSafe = beforeDate(before)
   const keepNumber = parseNumber(keep)
 
-  core.info(`Fetching deployments for project ${project} since ${sinceSafe.toISOString()}`)
+  core.info(`Fetching deployments for project ${project} after ${afterSafe.toISOString()} before ${beforeSafe ? beforeSafe.toISOString() : 'not specified'}`)
 
   /** @type {import('./typings/dependencies').Response['result']} */
-  const deployments = await getDeployments(project, account, sinceSafe, token)
+  const deployments = await getDeployments(project, account, afterSafe, token, beforeSafe)
 
   core.info(`Found ${deployments.length} deployments in total`)
 
   // Filter deployments by branch name
   const branchDeployments = deployments
-    .filter(d => new Date(d.created_on).getTime() >= sinceSafe.getTime())
+    .filter(d => new Date(d.created_on).getTime() >= afterSafe.getTime())
     .filter(d => deploymentTriggerType === '' || d.deployment_trigger.type === deploymentTriggerType)
     .filter(d => d.deployment_trigger.metadata.branch === branch)
     .slice(keepNumber)
